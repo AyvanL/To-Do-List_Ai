@@ -117,8 +117,18 @@ function App() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setTodos([]);
+    setError('');
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        console.warn('Supabase sign-out reported an error, continuing anyway:', signOutError.message);
+      }
+    } catch (err) {
+      console.error('Unexpected error during sign out', err);
+    } finally {
+      setSession(null);
+      setTodos([]);
+    }
   };
 
   const handleAddTodo = async (text: string) => {
@@ -235,94 +245,116 @@ function App() {
     const isSignIn = authMode === 'sign-in';
 
     return (
-      <div className="app auth-screen">
-        <div className="auth-card">
-          <div className="auth-header">
-            <div className="auth-icon">✨</div>
-            <h1>AI Todo Planner</h1>
-            <p className="auth-description">
-              {isSignIn
-                ? 'Welcome back! Sign in to access your tasks and AI-powered prioritization.'
-                : 'Join us today. Sync your tasks across devices and unlock intelligent prioritization.'}
+      <div className="app auth-web">
+        <div className="auth-grid">
+          <section className="auth-hero">
+            <p className="hero-pill">Gemini powered</p>
+            <h1>Plan smarter, finish faster.</h1>
+            <p>
+              Capture everything on your mind once, then let our AI arrange the ideal order so you can focus on momentum—not juggling priorities.
             </p>
-          </div>
-
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={`auth-tab ${isSignIn ? 'active' : ''}`}
-              onClick={() => setAuthMode('sign-in')}
-              disabled={isAuthLoading}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              className={`auth-tab ${!isSignIn ? 'active' : ''}`}
-              onClick={() => setAuthMode('sign-up')}
-              disabled={isAuthLoading}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          <form className="auth-form" onSubmit={handleAuthSubmit}>
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <span className="input-icon">📧</span>
-                <input
-                  id="email"
-                  type="email"
-                  value={authForm.email}
-                  onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
-                  required
-                  className="auth-input"
-                  placeholder="you@example.com"
-                />
+            <div className="hero-points">
+              <div>
+                <span className="point-label">Realtime sync</span>
+                <strong>Cross-device updates</strong>
+              </div>
+              <div>
+                <span className="point-label">AI insights</span>
+                <strong>Instant prioritization</strong>
               </div>
             </div>
+          </section>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
-                <input
-                  id="password"
-                  type="password"
-                  value={authForm.password}
-                  onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                  className="auth-input"
-                  minLength={6}
-                  placeholder="At least 6 characters"
-                />
+          <section className="auth-panel">
+            <div className="auth-card">
+              <div className="auth-header">
+                <div className="auth-icon">✨</div>
+                <h2>AI Todo Planner</h2>
+                <p className="auth-description">
+                  {isSignIn
+                    ? 'Sign in to jump back into your organized, AI-assisted day.'
+                    : 'Create an account in seconds and unlock intelligent prioritization.'}
+                </p>
               </div>
-            </div>
 
-            <button type="submit" className="auth-button" disabled={isAuthLoading}>
-              {isAuthLoading ? (
-                <span className="button-loading">⏳ Processing...</span>
-              ) : isSignIn ? (
-                <span>Sign In →</span>
-              ) : (
-                <span>Create Account →</span>
+              <div className="auth-tabs">
+                <button
+                  type="button"
+                  className={`auth-tab ${isSignIn ? 'active' : ''}`}
+                  onClick={() => setAuthMode('sign-in')}
+                  disabled={isAuthLoading}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  className={`auth-tab ${!isSignIn ? 'active' : ''}`}
+                  onClick={() => setAuthMode('sign-up')}
+                  disabled={isAuthLoading}
+                >
+                  Sign Up
+                </button>
+              </div>
+
+              <form className="auth-form" onSubmit={handleAuthSubmit}>
+                <div className="form-group">
+                  <label htmlFor="email">Email Address</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon">📧</span>
+                    <input
+                      id="email"
+                      type="email"
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      className="auth-input"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon">🔒</span>
+                    <input
+                      id="password"
+                      type="password"
+                      value={authForm.password}
+                      onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                      required
+                      className="auth-input"
+                      minLength={6}
+                      placeholder="At least 6 characters"
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="auth-button" disabled={isAuthLoading}>
+                  {isAuthLoading ? (
+                    <span className="button-loading">⏳ Processing...</span>
+                  ) : isSignIn ? (
+                    <span>Sign In →</span>
+                  ) : (
+                    <span>Create Account →</span>
+                  )}
+                </button>
+              </form>
+
+              {authError && (
+                <div className="auth-alert auth-error">
+                  <span className="alert-icon">⚠️</span>
+                  {authError}
+                </div>
               )}
-            </button>
-          </form>
-
-          {authError && (
-            <div className="auth-alert auth-error">
-              <span className="alert-icon">⚠️</span>
-              {authError}
+              {authMessage && (
+                <div className="auth-alert auth-message">
+                  <span className="alert-icon">✓</span>
+                  {authMessage}
+                </div>
+              )}
             </div>
-          )}
-          {authMessage && (
-            <div className="auth-alert auth-message">
-              <span className="alert-icon">✓</span>
-              {authMessage}
-            </div>
-          )}
+          </section>
         </div>
       </div>
     );
