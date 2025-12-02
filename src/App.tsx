@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
-import { TodoList } from './components/TodoList';
 import { GeminiService } from './services/geminiService';
 import type { Todo } from './types/todo';
 import { supabase } from './lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
+import { LoginPage } from './pages/LoginPage';
+import { SignupPage } from './pages/SignupPage';
+import { DashboardPage } from './pages/DashboardPage';
+import type { AuthMode } from './types/auth.ts';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [authMode, setAuthMode] = useState<'sign-in' | 'sign-up'>('sign-in');
+  const [authMode, setAuthMode] = useState<AuthMode>('sign-in');
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
   const [authError, setAuthError] = useState('');
   const [authMessage, setAuthMessage] = useState('');
@@ -82,7 +85,11 @@ function App() {
   const pendingCount = todos.filter(todo => !todo.completed).length;
   const completedCount = todos.length - pendingCount;
 
-  const handleAuthSubmit = async (event: React.FormEvent) => {
+  const handleAuthFieldChange = (field: 'email' | 'password', value: string) => {
+    setAuthForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAuthSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsAuthLoading(true);
     setAuthError('');
@@ -242,197 +249,38 @@ function App() {
   };
 
   if (!session) {
-    const isSignIn = authMode === 'sign-in';
+    const sharedAuthProps = {
+      authForm,
+      isLoading: isAuthLoading,
+      authError,
+      authMessage,
+      onFieldChange: handleAuthFieldChange,
+      onSubmit: handleAuthSubmit,
+      onSwitchMode: setAuthMode,
+    };
 
-    return (
-      <div className="app auth-web">
-        <div className="auth-grid">
-          <section className="auth-hero">
-            <p className="hero-pill">Gemini powered</p>
-            <h1>Plan smarter, finish faster.</h1>
-            <p>
-              Capture everything on your mind once, then let our AI arrange the ideal order so you can focus on momentum—not juggling priorities.
-            </p>
-            <div className="hero-points">
-              <div>
-                <span className="point-label">Realtime sync</span>
-                <strong>Cross-device updates</strong>
-              </div>
-              <div>
-                <span className="point-label">AI insights</span>
-                <strong>Instant prioritization</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className="auth-panel">
-            <div className="auth-card">
-              <div className="auth-header">
-                <div className="auth-icon">✨</div>
-                <h2>AI Todo Planner</h2>
-                <p className="auth-description">
-                  {isSignIn
-                    ? 'Sign in to jump back into your organized, AI-assisted day.'
-                    : 'Create an account in seconds and unlock intelligent prioritization.'}
-                </p>
-              </div>
-
-              <div className="auth-tabs">
-                <button
-                  type="button"
-                  className={`auth-tab ${isSignIn ? 'active' : ''}`}
-                  onClick={() => setAuthMode('sign-in')}
-                  disabled={isAuthLoading}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  className={`auth-tab ${!isSignIn ? 'active' : ''}`}
-                  onClick={() => setAuthMode('sign-up')}
-                  disabled={isAuthLoading}
-                >
-                  Sign Up
-                </button>
-              </div>
-
-              <form className="auth-form" onSubmit={handleAuthSubmit}>
-                <div className="form-group">
-                  <label htmlFor="email">Email Address</label>
-                  <div className="input-wrapper">
-                    <span className="input-icon">📧</span>
-                    <input
-                      id="email"
-                      type="email"
-                      value={authForm.email}
-                      onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                      className="auth-input"
-                      placeholder="you@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="password">Password</label>
-                  <div className="input-wrapper">
-                    <span className="input-icon">🔒</span>
-                    <input
-                      id="password"
-                      type="password"
-                      value={authForm.password}
-                      onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                      className="auth-input"
-                      minLength={6}
-                      placeholder="At least 6 characters"
-                    />
-                  </div>
-                </div>
-
-                <button type="submit" className="auth-button" disabled={isAuthLoading}>
-                  {isAuthLoading ? (
-                    <span className="button-loading">⏳ Processing...</span>
-                  ) : isSignIn ? (
-                    <span>Sign In →</span>
-                  ) : (
-                    <span>Create Account →</span>
-                  )}
-                </button>
-              </form>
-
-              {authError && (
-                <div className="auth-alert auth-error">
-                  <span className="alert-icon">⚠️</span>
-                  {authError}
-                </div>
-              )}
-              {authMessage && (
-                <div className="auth-alert auth-message">
-                  <span className="alert-icon">✓</span>
-                  {authMessage}
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
-      </div>
+    return authMode === 'sign-in' ? (
+      <LoginPage {...sharedAuthProps} />
+    ) : (
+      <SignupPage {...sharedAuthProps} />
     );
   }
 
   return (
-    <div className="app dashboard">
-      <div className="dashboard-shell">
-        <header className="top-bar">
-          <div className="brand-block">
-            <span className="brand-icon">✨</span>
-            <div>
-              <p className="brand-eyebrow">Gemini co-pilot</p>
-              <h1>AI Todo Planner</h1>
-            </div>
-          </div>
-          <div className="user-controls">
-            <div className="user-meta">
-              <span className="user-label">Signed in</span>
-              <span className="user-email">{session.user.email}</span>
-            </div>
-            <button className="signout-button" onClick={handleSignOut}>
-              Sign out
-            </button>
-          </div>
-        </header>
-
-        <div className="container dashboard-grid">
-          <header className="hero">
-            <p className="hero-eyebrow">Plan smarter with AI</p>
-            <h2>Stay sharp and let Gemini sequence your day</h2>
-            <p className="hero-subtitle">
-              Capture every task, prioritize in one click, and keep important work front and center on any screen size.
-            </p>
-            <div className="hero-stats">
-              <div className="stat-card">
-                <span className="stat-value">{pendingCount}</span>
-                <span className="stat-label">Tasks in queue</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">{completedCount}</span>
-                <span className="stat-label">Completed today</span>
-              </div>
-            </div>
-          </header>
-
-          <section className="planner-card">
-            <div className="planner-header">
-              <h2>Build your plan</h2>
-              <p>Add everything you need to get done, then let Gemini arrange the perfect order.</p>
-            </div>
-
-            <TodoList
-              todos={todos}
-              onAddTodo={handleAddTodo}
-              onDeleteTodo={handleDeleteTodo}
-              onToggleTodo={handleToggleTodo}
-              isDisabled={isPrioritizing || isTodosLoading}
-              isLoading={isTodosLoading}
-            />
-
-            <div className="planner-footer">
-              {todos.length > 0 && (
-                <button 
-                  onClick={handlePrioritize} 
-                  disabled={isPrioritizing}
-                  className="prioritize-button"
-                >
-                  {isPrioritizing ? 'AI is thinking...' : '🤖 Prioritize with AI'}
-                </button>
-              )}
-
-              {error && <div className="error-message">{error}</div>}
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+    <DashboardPage
+      session={session}
+      todos={todos}
+      pendingCount={pendingCount}
+      completedCount={completedCount}
+      error={error}
+      isPrioritizing={isPrioritizing}
+      isTodosLoading={isTodosLoading}
+      onAddTodo={handleAddTodo}
+      onDeleteTodo={handleDeleteTodo}
+      onToggleTodo={handleToggleTodo}
+      onPrioritize={handlePrioritize}
+      onSignOut={handleSignOut}
+    />
   );
 }
 
